@@ -8,6 +8,7 @@ from os import path, rename, remove
 from mutagen.mp4 import MP4, MP4Cover
 import urllib.request
 
+
 logo=logo()
 the_true_b_and_a_magic()
 
@@ -132,7 +133,7 @@ def GetBest(Banger):
     try :
         results = YoutubeSearch(Banger[0]+' - '+Banger[1], max_results=5).to_dict()
         for chanson in results:
-            chanson = (chanson['title'], chanson['duration'], chanson['url_suffix'])
+            chanson = (chanson['title'], chanson['duration'], chanson['url_suffix'][:20])
             delta=duration_comparison(Banger, chanson)
             if delta!=None and name_comparison(Banger, chanson):
                 conserve.append([chanson[0], chanson[2], round(delta/1000,3)])
@@ -176,8 +177,8 @@ def Telecharger_Chanson(lien_downloads):
                     audio['covr']=[MP4Cover(pochette.read(), imageformat=MP4Cover.FORMAT_JPEG)]
                 audio.save()
             except Exception as e:
-                print(f"Une erreur lors de l'édition de {Banger}: {e}")
-                ecrire_fichier(".", "Reports", f"\nUne erreur lors de l'édition de {Banger[0]} - {Banger[1]}, cause : {e}")
+                print(f"Une erreur lors de l'édition de {ProcessedBanger['nomVideo']}: {e}")
+                ecrire_fichier(".", "Reports", f"\nUne erreur lors de l'édition de {ProcessedBanger['nomChanson']} - {ProcessedBanger['ArtistePrincipal']}, cause : {e}")
             remove('Pochette.jpg')
             rename(f"downloads/{ProcessedBanger['nomVideo']}.m4a", "downloads/"+ProcessedBanger['nomChanson']+' - '+ProcessedBanger['artistePrincipal']+".m4a")
 
@@ -198,4 +199,5 @@ if path.exists(path.join(".", "Reports")):
     ecrire_fichier(".", "Reports", f"\n\n{str(datetime.now())[:20]} execution Report")
 else: 
     ecrire_fichier(".", "Reports", f"{logo}\nReport of errors encountered while searching or downloading songs\n{str(datetime.now())} execution Report")
+
 Processing()
