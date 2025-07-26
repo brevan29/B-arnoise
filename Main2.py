@@ -62,20 +62,29 @@ class Chanson:
         soi.telechargee = False #Todo : le vérifier.
 
     def searchYt(soi):
-        print(soi.Titre)
+        print(soi.Titre) #! A modifier une fois que ce sera bon
         soi.liensValables = []
-        results = YoutubeSearch(soi.Titre+' - '+soi.ArtistePrincipal+' '+soi.ArtistesSecondaires, max_results=5).to_dict()
+        try : 
+            results = YoutubeSearch(soi.Titre+' - '+soi.ArtistePrincipal+' '+str(soi.ArtistesSecondaires), max_results=5).to_dict()
+        except AttributeError:
+            results = YoutubeSearch(soi.Titre+' - '+soi.ArtistePrincipal, max_results=5).to_dict()
         for chanson in results:
             chanson = (chanson['title'], chanson['duration'], chanson['url_suffix'][:20])
-            delta=duration_comparison(soi, chanson)
+            delta=duration_comparison(soi.Duree, chanson)
             if delta!=None and name_comparison(soi, chanson):
                 soi.liensValables.append([chanson[0], chanson[2], round(delta/1000,3)])
-        soi.BestBanger = []
-        soi.otherBangers =[[]]
-    
+        if len(soi.liensValables) !=0 :        
+            soi.liensValables.sort(key=ComparaisonDelta)
+            soi.BestBanger = soi.liensValables[0]
+            if len(soi.liensValables)>1:
+                soi.OtherBangers = soi.liensValables[1:]
+                #todo : Modifier la couleur en orange pour que voilà
+        else: 
+            #todo : Modifier la couleur en rouge car c'est un problème d'envergure
+            print("HEEEEEEEEEELLLLLLLLLPPPPPPPPPPPP", soi.liensValables)
 
-    def changerYt(soi):
-        pass
+    def changerYt(soi, lien):
+        soi.LienVideo = lien
 
     def comparerYt(soi):
         pass
@@ -118,39 +127,17 @@ class Chanson:
                 remove('Pochette.jpg')
                 rename(f"downloads/{ProcessedBanger['nomVideo']}.m4a", "downloads/"+ProcessedBanger['nomChanson']+' - '+ProcessedBanger['artistePrincipal']+".m4a")
 
-def GetBest(Banger):
-    conserve=[]
-    try :
-        results = YoutubeSearch(Banger[0]+' - '+Banger[1], max_results=5).to_dict()
-        for chanson in results:
-            chanson = (chanson['title'], chanson['duration'], chanson['url_suffix'][:20])
-            delta=duration_comparison(Banger, chanson)
-            if delta!=None and name_comparison(Banger, chanson):
-                conserve.append([chanson[0], chanson[2], round(delta/1000,3)])
-        deltamin=5
-        mChanson=0
-        for i in range(len(conserve)):
-            if conserve[i][2]<deltamin:
-                deltamin=conserve[i][2]
-                mChanson=i
-        if len(conserve)==0: 
-            return None
-        return conserve[mChanson]
-    except Exception as e:
-        print(f"Une erreur est survenue avec la recherche de {Banger}: {e}")
-        #ecrire_fichier(".", "Reports", f"\nErreur avec {Banger[0]} - {Banger[1]}, cause : {e}")
-        return "Merde"
+def ComparaisonDelta(x):
+    return x[2]
 
-def name_comparison(rech, prop):
-    if (rech[1].lower() in prop[0].lower() or rech[0].lower() in prop[0].lower()):
-        return True
-    else :
-        return False
+def name_comparison(rech : Chanson, prop):
+    return (rech.ArtistePrincipal.lower() in prop[0].lower() or rech.Titre.lower() in prop[0].lower())
+    #todo : Tenter un for any mais il faut gérer le bordel déjà
 
 def duration_comparison(rech, prop):
     duration = prop[1].split(":")
     duration_ms = int(duration[0]) * 60000 + int(duration[1]) * 1000
-    delta=abs(duration_ms-rech[2])
+    delta=abs(duration_ms-rech)
     if delta<5000 :
         return delta
     else :

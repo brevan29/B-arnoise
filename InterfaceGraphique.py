@@ -1,16 +1,14 @@
 from Main2 import*
 from tkinter import*
 import tkinter.ttk as ttk
-import tkinter.filedialog as FD
-from pprint import pprint
 
 class fenetre(Tk): 
     def __init__(self):
         Tk.__init__(self) 
         self.title("b-arnoise en fonction")
         self.menuBar()
-        self.geometry('970x300')
-        self.resizable(0,0)
+        self.geometry('520x300')
+        self.resizable(1,0)
         self.client_id,self.client_secret,self.redirect_uri = "", "", ""
 
     def menuBar(self):
@@ -32,7 +30,7 @@ class fenetre(Tk):
         self.ecrireURI.grid(padx=5, pady=5, column=1, row=0)
         self.jeValide = ttk.Button(self.zoneImport, text='Valider', command=self.valider)
         self.jeValide.grid(padx=10, pady=5, column=2, row=0)
-        self.mainloop()
+        
     
     def valider(self):
         self.Type = self.Type.get()
@@ -96,30 +94,70 @@ class fenetre(Tk):
         
     def LancerTableauDesChansons(self):
         self.TableauChansons = ttk.Treeview(self, columns=("Titre","Artistes", "Album", 'Durée', "URI de Piste", "VidéoYT", "LienYT"), height=20, show='headings')
+        self.geometry('1120x300')
         self.TableauChansons.column("Titre", width=200, anchor='center'); self.TableauChansons.heading("Titre", text="Titre")
         self.TableauChansons.column("Artistes", width=150, anchor='center'); self.TableauChansons.heading("Artistes", text="Artistes")
         self.TableauChansons.column("Album", width=150, anchor='center'); self.TableauChansons.heading("Album", text="Album")
         self.TableauChansons.column("Durée", width=70, anchor='center'); self.TableauChansons.heading("Durée", text="Durée")
         self.TableauChansons.column("URI de Piste", width=100, anchor='center'); self.TableauChansons.heading("URI de Piste", text="URI de Piste")
-        self.TableauChansons.column("VidéoYT", width=200, anchor='center'); self.TableauChansons.heading("VidéoYT", text="Vidéo Youtube équivalente")
-        self.TableauChansons.column("LienYT", width=100, anchor='center'); self.TableauChansons.heading("LienYT", text="Lien de la vidéo")
-        self.TableauChansons.grid(row=1, column=0, columnspan=5, sticky='n', pady=5)
+        self.TableauChansons.column("VidéoYT", width=300, anchor='center'); self.TableauChansons.heading("VidéoYT", text="Vidéo Youtube équivalente")
+        self.TableauChansons.column("LienYT", width=150, anchor='center'); self.TableauChansons.heading("LienYT", text="Lien de la vidéo")
+        self.TableauChansons.grid(row=1, column=0, columnspan=4, sticky='n', pady=5)
         self.ajouterPistes()
 
     def ajouterPistes(self):
         for chanson in self.contenuPlaylist:
             self.TableauChansons.insert(parent='', index=END, values=[chanson.Titre, chanson.ArtistePrincipal, chanson.album, chanson.Duree, chanson.lien, chanson.NomVideo, chanson.LienVideo])
+        self.BoutonRechercheYt = ttk.Button(self, text='Chercher vidéos YT', command=self.chercherYT) #? Pourquoi que mainteant ? Parce que les actions ne peuvent se faire une fois qu'on a un visuel sur les chanons importées.
+        self.BoutonModifierLien = ttk.Button(self, text='Modifier un lien YT', command=self.modifier)
+        self.BoutonTéléchargerUn = ttk.Button(self, text='Télécharger une Chanson', command=self.telechargerUn)
+        self.BoutonToutTélécharger = ttk.Button(self, text='Tout télécharger', command=self.toutTélécharger)
+        self.BoutonRechercheYt.grid(row=0, column=0, padx=5, pady=2)
+        self.BoutonModifierLien.grid(row=0, column=1, padx=5, pady=2)
+        self.BoutonTéléchargerUn.grid(row=0, column=2, padx=5, pady=2)
+        self.BoutonToutTélécharger.grid(row=0, column=3, padx=5, pady=2)
 
-    def chercher(self): #? Chercher les equivalents YT de TOUTES les chansons.
-        pass
+    def chercherYT(self): #? Chercher les equivalents YT de TOUTES les chansons.
+        assert len(self.contenuPlaylist) == len(self.TableauChansons.get_children())
+        ids = self.TableauChansons.get_children()
+        for i in range(len(self.contenuPlaylist)):
+            BoumBoumTypeMusic = self.contenuPlaylist[i]
+            BoumBoumTypeMusic.searchYt()
+            if BoumBoumTypeMusic.liensValables != [] and BoumBoumTypeMusic.Titre == self.TableauChansons.item(ids[i])['values'][0]:
+                print(self.TableauChansons.item(ids[i]))
+                NouvelleValeur = self.TableauChansons.item(ids[i])['values']
+                NouvelleValeur[5], NouvelleValeur[6] = BoumBoumTypeMusic.BestBanger[0], BoumBoumTypeMusic.BestBanger[1]
+                self.TableauChansons.item(ids[i], values=NouvelleValeur)
+                print(self.TableauChansons.item(ids[i]))
 
     def sauver(self): #? Enregister lensemble des infos dans un fichier json pour pouvoir le rouvrir par la suite.
         # Todo Doit pouvoir contenir les toutes les infos de toutes les chansons et savoir si elles ont étées téléchargées.
         pass
+    
+    def modifier(self):
+        global id, BangersThatNeedHelp, Brevassistance, Valeurs
+        BangersThatNeedHelp = self.TableauChansons.selection()[0]
+        id = int(BangersThatNeedHelp[1:])
+        Valeurs = self.TableauChansons.item(BangersThatNeedHelp)['values']
+        Brevassistance = Tk()
+        ttk.Label(Brevassistance, text = str(Valeurs[0:3])+"; lien Youtube : ").grid()
+        self.DolipraneLikeSolution = Entry(Brevassistance, width=15)
+        self.DolipraneLikeSolution.insert(0, "/watch?v=")
+        self.DolipraneLikeSolution.grid()
+        ttk.Button(Brevassistance, text='Valider', command=self.Valider3).grid()
+
+    def Valider3(self):
+        self.DolipraneLikeSolution = self.DolipraneLikeSolution.get()
+        Brevassistance.destroy() #Aïe, j'ai mal. J'ai beau être matinal, j'ai mal
+        self.contenuPlaylist[id].LienVideo = self.DolipraneLikeSolution
+        Valeurs[5],Valeurs[6] = "Tkt, Ajouté manuellement", self.DolipraneLikeSolution
+        self.TableauChansons.item(BangersThatNeedHelp, values=Valeurs)
+
+    def telechargerUn(self, chanson):
+        chanson.Telecharger()
 
     def toutTélécharger(self):
         pass
-
 
 fen = fenetre()
 fen.mainloop()
