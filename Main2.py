@@ -10,6 +10,19 @@ import urllib.request
 
 logo=logo()
 the_true_b_and_a_magic()
+def ecrire_fichier(folder_path, file_name, text):
+    if not path.exists(folder_path):
+        print("The specified directory does not exist.")
+    else:
+        full_file_path = path.join(folder_path, file_name)
+
+        if path.exists(full_file_path):
+            file = open(full_file_path, 'a', encoding="utf-8")
+        else:
+            file = open(full_file_path, 'w', encoding="utf-8")
+
+        file.write(text)
+        file.close()
 
 def lire_fichier(chemin_fichier,coupe = ""):
     """
@@ -33,14 +46,23 @@ def lire_fichier(chemin_fichier,coupe = ""):
     return variables
 
 class Chanson:
-    def __init__(soi, titre, artistes, dur, lienPoc):
+    def __init__(soi, titre, artistes, album, dur, lienPoc, uri):
         soi.Titre = titre
-        soi.ArtistePrincipal = artistes #todo REVOIR ICIIIIII
-        soi.ArtistesSecondaires = artistes
+        soi.ArtistePrincipal = artistes[0]['name']
+        if len(artistes) > 1:
+            soi.ArtistesSecondaires = []
+            for Monsieur in artistes[1:]:
+                soi.ArtistesSecondaires.append(Monsieur['name'])
+        soi.album = album
         soi.Duree = dur
         soi.Pochette = lienPoc
+        soi.lien = uri
+        soi.NomVideo = ""
+        soi.LienVideo = ""
+        soi.telechargee = False #Todo : le vérifier.
 
     def searchYt(soi):
+        print(soi.Titre)
         soi.liensValables = []
         results = YoutubeSearch(soi.Titre+' - '+soi.ArtistePrincipal+' '+soi.ArtistesSecondaires, max_results=5).to_dict()
         for chanson in results:
@@ -50,6 +72,7 @@ class Chanson:
                 soi.liensValables.append([chanson[0], chanson[2], round(delta/1000,3)])
         soi.BestBanger = []
         soi.otherBangers =[[]]
+    
 
     def changerYt(soi):
         pass
