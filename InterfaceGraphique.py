@@ -1,6 +1,7 @@
 from Main2 import*
 from tkinter import*
 import tkinter.ttk as ttk
+from pprint import pprint
 
 class fenetre(Tk): 
     def __init__(self):
@@ -13,7 +14,6 @@ class fenetre(Tk):
 
     def menuBar(self):
         menu_bar = Menu(self)
-
         menu_bar.add_command(label="Importer une playlist", command=self.importPlaylist)
         menu_bar.add_command(label="Sauvegarder le travail", command=self.sauver)
         menu_bar.add_command(label="Rentrer les clés", command=self.setPrivateKey)
@@ -51,17 +51,17 @@ class fenetre(Tk):
         api_call = {'items' : []}
         if self.Type=="Playlist":
             while len(api_call['items']) == 100 or decalage == 0:
-                NomPlaylist = sp.user_playlist(user=None, playlist_id="3cqDkXVInhOYPpJyVzvwux", fields="name")["name"]
+                NomPlaylist = sp.user_playlist(user=None, playlist_id=self.URI, fields="name")["name"]
                 api_call = sp.playlist_tracks(f"spotify:playlist:{self.URI}", limit=100, offset=decalage)
                 for element in api_call['items']:
                     contenu.append(Chanson(element["track"]["name"], element["track"]["artists"], element["track"]["album"]['name'], element["track"]["duration_ms"], element['track']['album']['images'][0]['url'], element['track']['id'], NomPlaylist))
                 decalage += 100
         if self.Type=="Album":
-            while len(api_call['items']) == 100 or decalage == 0:
-                api_call = sp.album_tracks(f"spotify:playlist:{self.URI}", limit=100, offset=decalage)
-                for element in api_call['items']:
-                    contenu.append(Chanson(element["track"]["name"], element["track"]["artists"], element["track"]["album"]['name'], element["track"]["duration_ms"], element['track']['album']['images'][0]['url'], element['track']['id'], NomPlaylist))
-                decalage += 100
+            api_call = sp.album(f"spotify:album:{self.URI}")
+            NomAlbum = api_call['name']
+            Pochette = api_call["images"][0]['url']
+            for element in api_call['tracks']['items']:
+                contenu.append(Chanson(element["name"], element["artists"], NomAlbum, element["duration_ms"], Pochette, element['id'], NomAlbum))
         return contenu
     
     def setPrivateKey(self):
@@ -100,7 +100,16 @@ class fenetre(Tk):
             self.fenID.destroy()
         
     def LancerTableauDesChansons(self):
-        self.TableauChansons = ttk.Treeview(self, columns=("Titre","Artistes", "Album", 'Durée', "URI de Piste", "VidéoYT", "LienYT"), height=20, show='headings')
+        self.BoutonRechercheYt = ttk.Button(self, text='Chercher vidéos YT', command=self.chercherYT) 
+        self.BoutonModifierLien = ttk.Button(self, text='Modifier un lien YT', command=self.modifier)
+        self.BoutonTéléchargerUn = ttk.Button(self, text='Télécharger une sélection', command=self.telechargerSelection)
+        self.BoutonToutTélécharger = ttk.Button(self, text='Tout télécharger', command=self.toutTélécharger)
+        self.BoutonRechercheYt.grid(row=0, column=0, padx=5, pady=2)
+        self.BoutonModifierLien.grid(row=0, column=1, padx=5, pady=2)
+        self.BoutonTéléchargerUn.grid(row=0, column=2, padx=5, pady=2)
+        self.BoutonToutTélécharger.grid(row=0, column=3, padx=5, pady=2)
+
+        self.TableauChansons = ttk.Treeview(self, columns=("Titre","Artistes", "Album", 'Durée', "URI de Piste", "VidéoYT", "LienYT"), height=12, show='headings')
         self.geometry('1120x300')
         self.TableauChansons.column("Titre", width=200, anchor='center'); self.TableauChansons.heading("Titre", text="Titre")
         self.TableauChansons.column("Artistes", width=150, anchor='center'); self.TableauChansons.heading("Artistes", text="Artistes")
@@ -110,6 +119,9 @@ class fenetre(Tk):
         self.TableauChansons.column("VidéoYT", width=300, anchor='center'); self.TableauChansons.heading("VidéoYT", text="Vidéo Youtube équivalente")
         self.TableauChansons.column("LienYT", width=150, anchor='center'); self.TableauChansons.heading("LienYT", text="Lien de la vidéo")
         self.TableauChansons.grid(row=1, column=0, columnspan=4, sticky='n', pady=5)
+        self.vsb = ttk.Scrollbar(self, orient="vertical", command=self.TableauChansons.yview)
+        self.vsb.grid(row = 1, column = 5, sticky="ns")
+        self.TableauChansons.configure(yscrollcommand=self.vsb.set)
         self.ajouterPistes()
 
     def ajouterPistes(self):
@@ -118,14 +130,6 @@ class fenetre(Tk):
             self.TableauChansons.insert(parent='', index=END, values=[chanson.Titre, chanson.ArtistePrincipal, chanson.album, chanson.Duree, chanson.lien, chanson.NomVideo, chanson.LienVideo], iid=i, tag=str(i))
             if chanson.telechargee:
                 self.TableauChansons.tag_configure(str(i), background="#759f75")
-        self.BoutonRechercheYt = ttk.Button(self, text='Chercher vidéos YT', command=self.chercherYT) #? Pourquoi que mainteant ? Parce que les actions ne peuvent se faire une fois qu'on a un visuel sur les chanons importées.
-        self.BoutonModifierLien = ttk.Button(self, text='Modifier un lien YT', command=self.modifier)
-        self.BoutonTéléchargerUn = ttk.Button(self, text='Télécharger une sélection', command=self.telechargerSelection)
-        self.BoutonToutTélécharger = ttk.Button(self, text='Tout télécharger', command=self.toutTélécharger)
-        self.BoutonRechercheYt.grid(row=0, column=0, padx=5, pady=2)
-        self.BoutonModifierLien.grid(row=0, column=1, padx=5, pady=2)
-        self.BoutonTéléchargerUn.grid(row=0, column=2, padx=5, pady=2)
-        self.BoutonToutTélécharger.grid(row=0, column=3, padx=5, pady=2)
 
     def chercherYT(self): #? Chercher les equivalents YT de TOUTES les chansons.
         assert len(self.contenuPlaylist) == len(self.TableauChansons.get_children())
@@ -158,7 +162,10 @@ class fenetre(Tk):
         self.DolipraneLikeSolution = self.DolipraneLikeSolution.get()
         Brevassistance.destroy() #Aïe, j'ai mal. J'ai beau être matinal, j'ai mal
         self.contenuPlaylist[int(BangerThatNeedsHelp)].LienVideo = self.DolipraneLikeSolution
-        DLC = (YoutubeSearch('http://youtube.com'+self.DolipraneLikeSolution, max_results=1).to_dict()[0])
+        try:
+            DLC = (YoutubeSearch('http://youtube.com'+self.DolipraneLikeSolution, max_results=1).to_dict()[0])
+        except:
+            pprint(YoutubeSearch('http://youtube.com'+self.DolipraneLikeSolution, max_results=1).to_dict())
         self.contenuPlaylist[int(BangerThatNeedsHelp)].NomVideo = DLC["title"]
         Valeurs[5],Valeurs[6] = self.contenuPlaylist[int(BangerThatNeedsHelp)].NomVideo , self.DolipraneLikeSolution
         self.TableauChansons.item(BangerThatNeedsHelp, values=Valeurs)

@@ -82,13 +82,13 @@ class Chanson:
         soi.LienVideo = lien
 
     def Telecharger(soi):
-        ydl_opts = {'format': 'bestaudio/best','--ffmpeg-location' : "C:\\Users\\breva\\AppData\\Local\\Temp\\ffmpeg-7.1.1-full_build\\bin\\ffmpeg.exe",'postprocessors': [{'key': 'FFmpegExtractAudio','preferredcodec': 'm4a',}],'outtmpl': path.join(f"downloads/{soi.Playlist}", '%(title)s.%(ext)s'),'restrictfilenames': False,'noplaylist': True}
+        ydl_opts = {'format': 'bestaudio/best','--ffmpeg-location' : "C:\\Users\\breva\\AppData\\Local\\Temp\\ffmpeg-7.1.1-full_build\\bin\\ffmpeg.exe",'postprocessors': [{'key': 'FFmpegExtractAudio','preferredcodec': 'm4a',}],'outtmpl': path.join(f"downloads/{soi.NomPlaylist}", '%(title)s.%(ext)s'),'restrictfilenames': False,'noplaylist': True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download(['http://youtube.com'+soi.LienVideo])
             urllib.request.urlretrieve(soi.Pochette, "Pochette.jpg")
             soi.telechargee = True
             try:
-                audio = MP4("downloads/"+soi.NomVideo+'.m4a')
+                audio = MP4("downloads/"+soi.NomPlaylist+"/"+soi.NomVideo+'.m4a')
                 audio["\xa9nam"]=soi.Titre #Todo Intégrer les artistes secondaires quand ils sont là ‘\xa9alb’
                 audio['\xa9alb'] = soi.album
                 audio["\xa9ART"]=soi.ArtistePrincipal
@@ -99,7 +99,7 @@ class Chanson:
                 print(f"Une erreur lors de l'édition de {soi.NomVideo}: {e}")
                 #ecrire_fichier(".", "Reports", f"\nUne erreur lors de l'édition de {ProcessedBanger['nomChanson']} - {ProcessedBanger['ArtistePrincipal']}, cause : {e}")
             remove('Pochette.jpg')
-            rename(f"downloads/{soi.NomVideo}.m4a", "downloads/"+soi.Titre+' - '+soi.ArtistePrincipal+".m4a")
+            rename("downloads/"+soi.NomPlaylist+"/"+soi.NomVideo+'.m4a', "downloads/"+soi.NomPlaylist+"/"+soi.Titre+' - '+soi.ArtistePrincipal+".m4a")
 
 def ComparaisonDelta(x):
     return x[2]
