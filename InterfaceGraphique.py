@@ -16,7 +16,6 @@ class fenetre(Tk):
 
         menu_bar.add_command(label="Importer une playlist", command=self.importPlaylist)
         menu_bar.add_command(label="Sauvegarder le travail", command=self.sauver)
-        menu_bar.add_command(label="Tout télécharger", command=self.toutTélécharger)
         menu_bar.add_command(label="Rentrer les clés", command=self.setPrivateKey)
         menu_bar.add_command(label="Quitter", command=self.quit)
         self.config(menu=menu_bar)
@@ -47,13 +46,21 @@ class fenetre(Tk):
         except :
             self.setPrivateKey()
         sp = Spotify_magic(auth_manager=SpotifyOAuth(self.client_id,self.client_secret,self.redirect_uri,scope="user-library-read"))
+        
         decalage = 0
         api_call = {'items' : []}
         if self.Type=="Playlist":
             while len(api_call['items']) == 100 or decalage == 0:
+                NomPlaylist = sp.user_playlist(user=None, playlist_id="3cqDkXVInhOYPpJyVzvwux", fields="name")["name"]
                 api_call = sp.playlist_tracks(f"spotify:playlist:{self.URI}", limit=100, offset=decalage)
                 for element in api_call['items']:
-                    contenu.append(Chanson(element["track"]["name"], element["track"]["artists"], element["track"]["album"]['name'], element["track"]["duration_ms"], element['track']['album']['images'][0]['url'], element['track']['id']))
+                    contenu.append(Chanson(element["track"]["name"], element["track"]["artists"], element["track"]["album"]['name'], element["track"]["duration_ms"], element['track']['album']['images'][0]['url'], element['track']['id'], NomPlaylist))
+                decalage += 100
+        if self.Type=="Album":
+            while len(api_call['items']) == 100 or decalage == 0:
+                api_call = sp.album_tracks(f"spotify:playlist:{self.URI}", limit=100, offset=decalage)
+                for element in api_call['items']:
+                    contenu.append(Chanson(element["track"]["name"], element["track"]["artists"], element["track"]["album"]['name'], element["track"]["duration_ms"], element['track']['album']['images'][0]['url'], element['track']['id'], NomPlaylist))
                 decalage += 100
         return contenu
     
@@ -76,8 +83,8 @@ class fenetre(Tk):
 
     def valider2(self):
         if len(self.Entrerclient_id.get()) != 32 or len(self.Entrerclient_secret.get()) != 32: #? Pas ce qu'on veut quoi
-            self.Entrerclient_id.config(bg="#ff000096")
-            self.Entrerclient_secret.config(bg="#ff000096")
+            self.Entrerclient_id.config(bg="#ff5b5b")
+            self.Entrerclient_secret.config(bg="#ff5b5b")
         else :
             self.client_id = self.Entrerclient_id.get()
             self.client_secret = self.Entrerclient_secret.get()
@@ -106,11 +113,14 @@ class fenetre(Tk):
         self.ajouterPistes()
 
     def ajouterPistes(self):
-        for chanson in self.contenuPlaylist:
-            self.TableauChansons.insert(parent='', index=END, values=[chanson.Titre, chanson.ArtistePrincipal, chanson.album, chanson.Duree, chanson.lien, chanson.NomVideo, chanson.LienVideo])
+        for i in range(len(self.contenuPlaylist)):
+            chanson=self.contenuPlaylist[i]
+            self.TableauChansons.insert(parent='', index=END, values=[chanson.Titre, chanson.ArtistePrincipal, chanson.album, chanson.Duree, chanson.lien, chanson.NomVideo, chanson.LienVideo], iid=i, tag=str(i))
+            if chanson.telechargee:
+                self.TableauChansons.tag_configure(str(i), background="#759f75")
         self.BoutonRechercheYt = ttk.Button(self, text='Chercher vidéos YT', command=self.chercherYT) #? Pourquoi que mainteant ? Parce que les actions ne peuvent se faire une fois qu'on a un visuel sur les chanons importées.
         self.BoutonModifierLien = ttk.Button(self, text='Modifier un lien YT', command=self.modifier)
-        self.BoutonTéléchargerUn = ttk.Button(self, text='Télécharger une Chanson', command=self.telechargerUn)
+        self.BoutonTéléchargerUn = ttk.Button(self, text='Télécharger une sélection', command=self.telechargerSelection)
         self.BoutonToutTélécharger = ttk.Button(self, text='Tout télécharger', command=self.toutTélécharger)
         self.BoutonRechercheYt.grid(row=0, column=0, padx=5, pady=2)
         self.BoutonModifierLien.grid(row=0, column=1, padx=5, pady=2)
@@ -119,29 +129,27 @@ class fenetre(Tk):
 
     def chercherYT(self): #? Chercher les equivalents YT de TOUTES les chansons.
         assert len(self.contenuPlaylist) == len(self.TableauChansons.get_children())
-        ids = self.TableauChansons.get_children()
         for i in range(len(self.contenuPlaylist)):
             BoumBoumTypeMusic = self.contenuPlaylist[i]
             BoumBoumTypeMusic.searchYt()
-            if BoumBoumTypeMusic.liensValables != [] and BoumBoumTypeMusic.Titre == self.TableauChansons.item(ids[i])['values'][0]:
-                print(self.TableauChansons.item(ids[i]))
-                NouvelleValeur = self.TableauChansons.item(ids[i])['values']
+            if BoumBoumTypeMusic.liensValables != [] and not BoumBoumTypeMusic.telechargee:
+                NouvelleValeur = self.TableauChansons.item(i)['values']
                 NouvelleValeur[5], NouvelleValeur[6] = BoumBoumTypeMusic.BestBanger[0], BoumBoumTypeMusic.BestBanger[1]
-                self.TableauChansons.item(ids[i], values=NouvelleValeur)
-                print(self.TableauChansons.item(ids[i]))
+                self.TableauChansons.item(i, values=NouvelleValeur)
+            elif not BoumBoumTypeMusic.telechargee :
+                self.TableauChansons.tag_configure(str(i), background="#ff5b5b")
 
     def sauver(self): #? Enregister lensemble des infos dans un fichier json pour pouvoir le rouvrir par la suite.
         # Todo Doit pouvoir contenir les toutes les infos de toutes les chansons et savoir si elles ont étées téléchargées.
         pass
     
     def modifier(self):
-        global id, BangersThatNeedHelp, Brevassistance, Valeurs
-        BangersThatNeedHelp = self.TableauChansons.selection()[0]
-        id = int(BangersThatNeedHelp[1:])
-        Valeurs = self.TableauChansons.item(BangersThatNeedHelp)['values']
+        global BangerThatNeedsHelp, Brevassistance, Valeurs
+        BangerThatNeedsHelp = self.TableauChansons.selection()[0]
+        Valeurs = self.TableauChansons.item(BangerThatNeedsHelp)['values']
         Brevassistance = Tk()
         ttk.Label(Brevassistance, text = str(Valeurs[0:3])+"; lien Youtube : ").grid()
-        self.DolipraneLikeSolution = Entry(Brevassistance, width=15)
+        self.DolipraneLikeSolution = Entry(Brevassistance, width=25)
         self.DolipraneLikeSolution.insert(0, "/watch?v=")
         self.DolipraneLikeSolution.grid()
         ttk.Button(Brevassistance, text='Valider', command=self.Valider3).grid()
@@ -149,15 +157,24 @@ class fenetre(Tk):
     def Valider3(self):
         self.DolipraneLikeSolution = self.DolipraneLikeSolution.get()
         Brevassistance.destroy() #Aïe, j'ai mal. J'ai beau être matinal, j'ai mal
-        self.contenuPlaylist[id].LienVideo = self.DolipraneLikeSolution
-        Valeurs[5],Valeurs[6] = "Tkt, Ajouté manuellement", self.DolipraneLikeSolution
-        self.TableauChansons.item(BangersThatNeedHelp, values=Valeurs)
+        self.contenuPlaylist[int(BangerThatNeedsHelp)].LienVideo = self.DolipraneLikeSolution
+        DLC = (YoutubeSearch('http://youtube.com'+self.DolipraneLikeSolution, max_results=1).to_dict()[0])
+        self.contenuPlaylist[int(BangerThatNeedsHelp)].NomVideo = DLC["title"]
+        Valeurs[5],Valeurs[6] = self.contenuPlaylist[int(BangerThatNeedsHelp)].NomVideo , self.DolipraneLikeSolution
+        self.TableauChansons.item(BangerThatNeedsHelp, values=Valeurs)
+        self.TableauChansons.tag_configure(BangerThatNeedsHelp, background="#faf8ca")
 
-    def telechargerUn(self, chanson):
-        chanson.Telecharger()
+    def telechargerSelection(self):
+        for idBanger in self.TableauChansons.selection() :
+            if not self.contenuPlaylist[int(idBanger)].telechargee :
+                self.contenuPlaylist[int(idBanger)].Telecharger()
+                self.TableauChansons.tag_configure(idBanger, background="#759f75")
 
     def toutTélécharger(self):
-        pass
+        for ApprovedBanger in range(len(self.contenuPlaylist)):
+            if not self.contenuPlaylist[int(ApprovedBanger)].telechargee :
+                self.contenuPlaylist[int(ApprovedBanger)].Telecharger()
+                self.TableauChansons.tag_configure(ApprovedBanger, background="#759f75")
 
 fen = fenetre()
 fen.mainloop()

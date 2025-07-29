@@ -3,7 +3,6 @@ from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify as Spotify_magic
 from youtube_search import YoutubeSearch
 import yt_dlp
-from datetime import datetime
 from os import path, rename, remove
 from mutagen.mp4 import MP4, MP4Cover
 import urllib.request
@@ -46,7 +45,7 @@ def lire_fichier(chemin_fichier,coupe = ""):
     return variables
 
 class Chanson:
-    def __init__(soi, titre, artistes, album, dur, lienPoc, uri):
+    def __init__(soi, titre, artistes, album, dur, lienPoc, uri, NPlaylist):
         soi.Titre = titre
         soi.ArtistePrincipal = artistes[0]['name']
         if len(artistes) > 1:
@@ -59,10 +58,10 @@ class Chanson:
         soi.lien = uri
         soi.NomVideo = ""
         soi.LienVideo = ""
-        soi.telechargee = False #Todo : le vérifier.
+        soi.telechargee = soi.Titre+" - "+soi.ArtistePrincipal in fichiers_audio #Todo : le vérifier.
+        soi.NomPlaylist = NPlaylist
 
     def searchYt(soi):
-        print(soi.Titre) #! A modifier une fois que ce sera bon
         soi.liensValables = []
         try : 
             results = YoutubeSearch(soi.Titre+' - '+soi.ArtistePrincipal+' '+str(soi.ArtistesSecondaires), max_results=5).to_dict()
@@ -76,56 +75,31 @@ class Chanson:
         if len(soi.liensValables) !=0 :        
             soi.liensValables.sort(key=ComparaisonDelta)
             soi.BestBanger = soi.liensValables[0]
-            if len(soi.liensValables)>1:
-                soi.OtherBangers = soi.liensValables[1:]
-                #todo : Modifier la couleur en orange pour que voilà
-        else: 
-            #todo : Modifier la couleur en rouge car c'est un problème d'envergure
-            print("HEEEEEEEEEELLLLLLLLLPPPPPPPPPPPP", soi.liensValables)
+            soi.NomVideo, soi.LienVideo= soi.BestBanger[0], soi.BestBanger[1]
+
 
     def changerYt(soi, lien):
         soi.LienVideo = lien
 
-    def comparerYt(soi):
-        pass
-
-    def forcerYt(soi):
-        pass
-
-    def chargerFichier(soi):
-        pass
-
-    def modifierFichier(soi):
-        pass
-
     def Telecharger(soi):
-        ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',
-            #'preferredquality': '192',
-        }],
-        'outtmpl': path.join("downloads", '%(title)s.%(ext)s'),
-        'restrictfilenames': False,
-        'noplaylist': True}
-        #! C'est de la merde ce qui est ici !
+        ydl_opts = {'format': 'bestaudio/best','--ffmpeg-location' : "C:\\Users\\breva\\AppData\\Local\\Temp\\ffmpeg-7.1.1-full_build\\bin\\ffmpeg.exe",'postprocessors': [{'key': 'FFmpegExtractAudio','preferredcodec': 'm4a',}],'outtmpl': path.join(f"downloads/{soi.Playlist}", '%(title)s.%(ext)s'),'restrictfilenames': False,'noplaylist': True}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            for ProcessedBanger in ydl_opts:# in lien_downloads:
-                ydl.download(['http://youtube.com'+ProcessedBanger['lienVideo']])
-                urllib.request.urlretrieve(ProcessedBanger['lienImage'], "Pochette.jpg")
-                try:
-                    audio = MP4("downloads/"+ProcessedBanger['nomVideo']+'.m4a')
-                    audio["\xa9nam"]=ProcessedBanger['nomChanson']
-                    audio["\xa9ART"]=ProcessedBanger['artistePrincipal']
-                    with open("Pochette.jpg", 'rb') as pochette:
-                        audio['covr']=[MP4Cover(pochette.read(), imageformat=MP4Cover.FORMAT_JPEG)]
-                    audio.save()
-                except Exception as e:
-                    print(f"Une erreur lors de l'édition de {ProcessedBanger['nomVideo']}: {e}")
-                    #ecrire_fichier(".", "Reports", f"\nUne erreur lors de l'édition de {ProcessedBanger['nomChanson']} - {ProcessedBanger['ArtistePrincipal']}, cause : {e}")
-                remove('Pochette.jpg')
-                rename(f"downloads/{ProcessedBanger['nomVideo']}.m4a", "downloads/"+ProcessedBanger['nomChanson']+' - '+ProcessedBanger['artistePrincipal']+".m4a")
+            ydl.download(['http://youtube.com'+soi.LienVideo])
+            urllib.request.urlretrieve(soi.Pochette, "Pochette.jpg")
+            soi.telechargee = True
+            try:
+                audio = MP4("downloads/"+soi.NomVideo+'.m4a')
+                audio["\xa9nam"]=soi.Titre #Todo Intégrer les artistes secondaires quand ils sont là ‘\xa9alb’
+                audio['\xa9alb'] = soi.album
+                audio["\xa9ART"]=soi.ArtistePrincipal
+                with open("Pochette.jpg", 'rb') as pochette:
+                    audio['covr']=[MP4Cover(pochette.read(), imageformat=MP4Cover.FORMAT_JPEG)]
+                audio.save()
+            except Exception as e:
+                print(f"Une erreur lors de l'édition de {soi.NomVideo}: {e}")
+                #ecrire_fichier(".", "Reports", f"\nUne erreur lors de l'édition de {ProcessedBanger['nomChanson']} - {ProcessedBanger['ArtistePrincipal']}, cause : {e}")
+            remove('Pochette.jpg')
+            rename(f"downloads/{soi.NomVideo}.m4a", "downloads/"+soi.Titre+' - '+soi.ArtistePrincipal+".m4a")
 
 def ComparaisonDelta(x):
     return x[2]
@@ -143,36 +117,29 @@ def duration_comparison(rech, prop):
     else :
         return None
     
-def Lister_Chansons_Playlist():
-    try:
-        Key = lire_fichier("PrivateKey")
-        client_id,client_secret,redirect_uri = Key[0],Key[1],Key[2]
-    except:
-        client_id,client_secret = "",""
-        while len(client_id) != 32:
-            client_id = input("Insérer votre \"Client ID\" (vous le trouverez à l'adresse https://developer.spotify.com/) : ")
-        while len(client_secret) != 32:
-            client_secret = input("Insérer votre \"Client secret\" (vous le trouverez à l'adresse https://developer.spotify.com/) : ")
-        redirect_uri = input("Insérer votre \"Redirect URIs\" : ")
-        from os import rename, path
-        if path.exists("PrivateKey"):
-            try :
-                rename("PrivateKey", "PrivateKey.bak")
-            except:
-                print("Erreur lors de la création du fichier \"PrivateKey\".")
-                return
-        #ecrire_fichier(".", "PrivateKey", f"{client_id}\n{client_secret}\n{redirect_uri}\n{logo}")
-    sp = Spotify_magic(auth_manager=SpotifyOAuth(client_id,client_secret,redirect_uri,scope="user-library-read"))
-    url = "empty"
-    while len(url) != 22:
-        url = input("Veuillez entrer la fin de l'URL de la playlist Spotify : ")
-    uri = 'spotify:playlist:'+url
-    liste_des_titres = []
-    decalage = 0
-    api_call = {'items' : []}
-    while len(api_call['items']) == 100 or decalage == 0:
-        api_call = sp.playlist_tracks(uri, limit=100, offset=decalage)
-        for element in api_call['items']:
-            liste_des_titres.append([element["track"]["name"],element["track"]["artists"][0]["name"],element["track"]["duration_ms"],element['track']['album']['images'][0]['url']]) #["artists"][0,1,2,...]["name"] # Je ne prend que le premier artiste.
-        decalage += 100
-    return liste_des_titres
+def lister_fichiers_audio(dossier):
+    """
+    Explore récursivement un dossier et stocke uniquement les fichiers audio trouvés,
+    sans leur extension.
+
+    Args:
+        dossier (str): Chemin du dossier à explorer.
+
+    Returns:
+        list: Liste des noms de fichiers audio (sans leur extension et sans leur chemin).
+    """
+    from os import walk, path
+
+    fichiers_audio = []
+    music_formats = {".mp3", ".m4a", ".wav", ".aac", ".ogg", ".pcm", ".caf", ".flac", ".alac", ".aiff", ".aif", ".dsd", ".dsf", "ape", "mpga", "oga", "opus"}
+
+    for _, _, fichiers in walk(dossier):  
+        for fichier in fichiers:
+            nom_fichier, extension = path.splitext(fichier)
+            if extension.lower() in music_formats:
+                fichiers_audio.append(nom_fichier)
+
+    return fichiers_audio
+
+
+fichiers_audio = lister_fichiers_audio('downloads')
