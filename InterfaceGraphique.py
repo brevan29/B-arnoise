@@ -1,6 +1,7 @@
 from Main2 import*
 from tkinter import*
 import tkinter.ttk as ttk
+from tkinter.filedialog import asksaveasfilename
 from pprint import pprint
 
 class fenetre(Tk): 
@@ -10,7 +11,7 @@ class fenetre(Tk):
         self.menuBar()
         self.geometry('520x300')
         self.resizable(1,0)
-        self.client_id,self.client_secret,self.redirect_uri = "", "", ""
+        self.client_id,self.client_secret,self.redirect_uri, self.contenuPlaylist = "", "", "", []
 
     def menuBar(self):
         menu_bar = Menu(self)
@@ -144,11 +145,29 @@ class fenetre(Tk):
                 self.TableauChansons.tag_configure(str(i), background="#ff5b5b")
 
     def sauver(self): #? Enregister lensemble des infos dans un fichier json pour pouvoir le rouvrir par la suite.
-        # Todo Doit pouvoir contenir les toutes les infos de toutes les chansons et savoir si elles ont étées téléchargées.
-        pass
+        assert self.contenuPlaylist != [] # La playlist n'est pas vide quoi
+        Donnees={'NomPlaylist' : self.contenuPlaylist[0].NomPlaylist}
+        for i in range(len(self.contenuPlaylist)):
+            BangerANePasOublier = self.contenuPlaylist[i]
+            Donnees[i] = {'titre':BangerANePasOublier.Titre, 'ArtistePrinc' : BangerANePasOublier.ArtistePrincipal, 'album' : BangerANePasOublier.album, "durée" : BangerANePasOublier.Duree, 'Pochette' : BangerANePasOublier.Pochette, 'uriChanson' : BangerANePasOublier.lien, 'NomVideo' : BangerANePasOublier.NomVideo, 'LienVideo' : BangerANePasOublier.LienVideo}
+        import json
+        with open(asksaveasfilename(filetypes=[("Javascript Object Node", '*.json')], initialfile='BoumBoumMusicCollection.json'),'w') as f:
+            json.dump(Donnees,f,indent=4, ensure_ascii=False)
     
+    def importer(self): #? Enregister lensemble des infos dans un fichier json pour pouvoir le rouvrir par la suite.
+        import json
+        with open(asksaveasfilename(filetypes=[("Javascript Object Node", '*.json')], initialfile='BoumBoumMusicCollection.json'),'w') as f:
+            Donnees = json.load(f)
+        contenu = []
+        Donnees={'NomPlaylist' : self.contenuPlaylist[0].NomPlaylist}
+        for i in range(len(self.contenuPlaylist)):
+            BangerANePasOublier = self.contenuPlaylist[i]
+            Donnees[i] = {'titre':BangerANePasOublier.Titre, 'ArtistePrinc' : BangerANePasOublier.ArtistePrincipal, 'album' : BangerANePasOublier.album, "durée" : BangerANePasOublier.Duree, 'Pochette' : BangerANePasOublier.Pochette, 'uriChanson' : BangerANePasOublier.lien, 'NomVideo' : BangerANePasOublier.NomVideo, 'LienVideo' : BangerANePasOublier.LienVideo}
+        
+
     def modifier(self):
         global BangerThatNeedsHelp, Brevassistance, Valeurs
+        assert len(self.TableauChansons.selection())!=0, "Il faut sélectionner une chanson pour que ça marche"
         BangerThatNeedsHelp = self.TableauChansons.selection()[0]
         Valeurs = self.TableauChansons.item(BangerThatNeedsHelp)['values']
         Brevassistance = Tk()

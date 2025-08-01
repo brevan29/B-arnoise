@@ -1,7 +1,7 @@
 from weird_shenanigan import logo, the_true_b_and_a_magic
+from youtube_search import YoutubeSearch
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify as Spotify_magic
-from youtube_search import YoutubeSearch
 import yt_dlp
 from os import path, rename, remove
 from mutagen.mp4 import MP4, MP4Cover
