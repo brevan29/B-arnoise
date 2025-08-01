@@ -45,20 +45,23 @@ def lire_fichier(chemin_fichier,coupe = ""):
     return variables
 
 class Chanson:
-    def __init__(soi, titre, artistes, album, dur, lienPoc, uri, NPlaylist):
+    def __init__(soi, titre, artistes, album, dur, lienPoc, uri, NPlaylist, NomVideoYT="", LienVideoYT=""):
         soi.Titre = titre
-        soi.ArtistePrincipal = artistes[0]['name']
-        if len(artistes) > 1:
-            soi.ArtistesSecondaires = []
-            for Monsieur in artistes[1:]:
-                soi.ArtistesSecondaires.append(Monsieur['name'])
+        try : #Importé depuis spotify
+            soi.ArtistePrincipal = artistes[0]['name']
+            if len(artistes) > 1:
+                soi.ArtistesSecondaires = []
+                for Monsieur in artistes[1:]:
+                    soi.ArtistesSecondaires.append(Monsieur['name'])
+        except TypeError: #Importé depuis un .json
+            soi.ArtistePrincipal = artistes
         soi.album = album
         soi.Duree = dur
         soi.Pochette = lienPoc
         soi.lien = uri
-        soi.NomVideo = ""
-        soi.LienVideo = ""
-        soi.telechargee = soi.Titre+" - "+soi.ArtistePrincipal in fichiers_audio #Todo : le vérifier.
+        soi.NomVideo = NomVideoYT
+        soi.LienVideo = LienVideoYT
+        soi.telechargee = soi.Titre+" - "+soi.ArtistePrincipal in fichiers_audio
         soi.NomPlaylist = NPlaylist
 
     def searchYt(soi):
@@ -89,7 +92,7 @@ class Chanson:
             soi.telechargee = True
             try:
                 audio = MP4("downloads/"+soi.NomPlaylist+"/"+soi.NomVideo+'.m4a')
-                audio["\xa9nam"]=soi.Titre #Todo Intégrer les artistes secondaires quand ils sont là ‘\xa9alb’
+                audio["\xa9nam"]=soi.Titre #Todo Intégrer les artistes secondaires quand ils sont là
                 audio['\xa9alb'] = soi.album
                 audio["\xa9ART"]=soi.ArtistePrincipal
                 with open("Pochette.jpg", 'rb') as pochette:

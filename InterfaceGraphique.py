@@ -1,7 +1,7 @@
 from Main2 import*
 from tkinter import*
 import tkinter.ttk as ttk
-from tkinter.filedialog import asksaveasfilename
+from tkinter.filedialog import asksaveasfilename, askopenfilename
 from pprint import pprint
 
 class fenetre(Tk): 
@@ -15,16 +15,20 @@ class fenetre(Tk):
 
     def menuBar(self):
         menu_bar = Menu(self)
-        menu_bar.add_command(label="Importer une playlist", command=self.importPlaylist)
-        menu_bar.add_command(label="Sauvegarder le travail", command=self.sauver)
-        menu_bar.add_command(label="Rentrer les clés", command=self.setPrivateKey)
-        menu_bar.add_command(label="Quitter", command=self.quit)
+        menu_deroulant = Menu(menu_bar, tearoff=0)
+        menu_deroulant.add_command(label="Importer une playlist", command=self.importPlaylist)
+        menu_deroulant.add_command(label="Sauvegarder le travail", command=self.sauver)
+        menu_deroulant.add_command(label="Reprendre un travail", command=self.importer)
+        menu_deroulant.add_command(label="Rentrer les clés", command=self.setPrivateKey)
+        menu_deroulant.add_separator()
+        menu_deroulant.add_command(label="Quitter", command=self.quit)
+        menu_bar.add_cascade(label = 'Fichier', menu = menu_deroulant)
         self.config(menu=menu_bar)
 
     def importPlaylist(self):
         self.zoneImport = Frame(self)
         self.zoneImport.grid(row = 0, column = 0)
-        self.Type = ttk.Combobox(self.zoneImport, values=["Artiste", "Album", "Playlist"], width=9)
+        self.Type = ttk.Combobox(self.zoneImport, values=["Album", "Playlist"], width=8)
         self.Type.grid(padx=10, pady=5, column=0, row=0)
         self.ecrireURI = ttk.Entry(self.zoneImport, width=28)
         self.ecrireURI.grid(padx=5, pady=5, column=1, row=0)
@@ -71,7 +75,7 @@ class fenetre(Tk):
         Label(self.fenID, text="Client ID").grid(row=0, column=0, padx=5, pady=2.5)
         Label(self.fenID, text="Client secret").grid(row=0, column=1, padx=5, pady=2.5)
         Label(self.fenID, text="Redirect URI").grid(row=0, column=2, padx=5, pady=2.5)
-
+        self.boutonSpecial = ttk.Button(self.fenID, text = "G 1 Fichier", command=self.FichierDispo)
         self.Entrerclient_id = Entry(self.fenID, width=33, text=self.client_id)
         self.Entrerclient_secret = Entry(self.fenID, width=33, text=self.client_secret)
         self.Entrerredirect_uri = Entry(self.fenID, width=20, text=self.redirect_uri)
@@ -81,6 +85,11 @@ class fenetre(Tk):
         self.Entrerclient_secret.grid(row=1, column=1)
         self.Entrerredirect_uri.grid(row=1, column=2)
         self.jeValide2.grid(row=1, column=3)
+
+    def FichierDispo(self):
+        self.fenID.destroy()
+        Key = lire_fichier(askopenfilename())            
+        self.client_id,self.client_secret,self.redirect_uri = Key[0],Key[1],Key[2]
 
     def valider2(self):
         if len(self.Entrerclient_id.get()) != 32 or len(self.Entrerclient_secret.get()) != 32: #? Pas ce qu'on veut quoi
@@ -123,6 +132,7 @@ class fenetre(Tk):
         self.vsb = ttk.Scrollbar(self, orient="vertical", command=self.TableauChansons.yview)
         self.vsb.grid(row = 1, column = 5, sticky="ns")
         self.TableauChansons.configure(yscrollcommand=self.vsb.set)
+        self.TableauChansons.bind("<Double-1>", self.ChangerValeur)
         self.ajouterPistes()
 
     def ajouterPistes(self):
@@ -130,7 +140,7 @@ class fenetre(Tk):
             chanson=self.contenuPlaylist[i]
             self.TableauChansons.insert(parent='', index=END, values=[chanson.Titre, chanson.ArtistePrincipal, chanson.album, chanson.Duree, chanson.lien, chanson.NomVideo, chanson.LienVideo], iid=i, tag=str(i))
             if chanson.telechargee:
-                self.TableauChansons.tag_configure(str(i), background="#759f75")
+                self.TableauChansons.tag_configure(str(i), background="#83A183")
 
     def chercherYT(self): #? Chercher les equivalents YT de TOUTES les chansons.
         assert len(self.contenuPlaylist) == len(self.TableauChansons.get_children())
@@ -142,32 +152,46 @@ class fenetre(Tk):
                 NouvelleValeur[5], NouvelleValeur[6] = BoumBoumTypeMusic.BestBanger[0], BoumBoumTypeMusic.BestBanger[1]
                 self.TableauChansons.item(i, values=NouvelleValeur)
             elif not BoumBoumTypeMusic.telechargee :
-                self.TableauChansons.tag_configure(str(i), background="#ff5b5b")
+                self.TableauChansons.tag_configure(str(i), background="#fd7676")
 
     def sauver(self): #? Enregister lensemble des infos dans un fichier json pour pouvoir le rouvrir par la suite.
-        assert self.contenuPlaylist != [] # La playlist n'est pas vide quoi
+        if not self.contenuPlaylist != [] :
+            raise AssertionError('\n'*10+"La playlist est vide, tu veux que je sauvegarde quoi ?")
         Donnees={'NomPlaylist' : self.contenuPlaylist[0].NomPlaylist}
         for i in range(len(self.contenuPlaylist)):
             BangerANePasOublier = self.contenuPlaylist[i]
-            Donnees[i] = {'titre':BangerANePasOublier.Titre, 'ArtistePrinc' : BangerANePasOublier.ArtistePrincipal, 'album' : BangerANePasOublier.album, "durée" : BangerANePasOublier.Duree, 'Pochette' : BangerANePasOublier.Pochette, 'uriChanson' : BangerANePasOublier.lien, 'NomVideo' : BangerANePasOublier.NomVideo, 'LienVideo' : BangerANePasOublier.LienVideo}
+            Donnees[str(i)] = {'titre':BangerANePasOublier.Titre, 'ArtistePrinc' : BangerANePasOublier.ArtistePrincipal, 'album' : BangerANePasOublier.album, "durée" : BangerANePasOublier.Duree, 'Pochette' : BangerANePasOublier.Pochette, 'uriChanson' : BangerANePasOublier.lien, 'NomVideo' : BangerANePasOublier.NomVideo, 'LienVideo' : BangerANePasOublier.LienVideo}
         import json
-        with open(asksaveasfilename(filetypes=[("Javascript Object Node", '*.json')], initialfile='BoumBoumMusicCollection.json'),'w') as f:
+        Fichier = asksaveasfilename(filetypes=[("Javascript Object Node", '*.json')], initialfile='BoumBoumMusicCollection.json')
+        print(Fichier)
+        with open(Fichier,'w') as f:
             json.dump(Donnees,f,indent=4, ensure_ascii=False)
     
     def importer(self): #? Enregister lensemble des infos dans un fichier json pour pouvoir le rouvrir par la suite.
         import json
-        with open(asksaveasfilename(filetypes=[("Javascript Object Node", '*.json')], initialfile='BoumBoumMusicCollection.json'),'w') as f:
+        with open(askopenfilename(filetypes=[("Javascript Object Node", '*.json')]),'r') as f:
             Donnees = json.load(f)
-        contenu = []
-        Donnees={'NomPlaylist' : self.contenuPlaylist[0].NomPlaylist}
-        for i in range(len(self.contenuPlaylist)):
-            BangerANePasOublier = self.contenuPlaylist[i]
-            Donnees[i] = {'titre':BangerANePasOublier.Titre, 'ArtistePrinc' : BangerANePasOublier.ArtistePrincipal, 'album' : BangerANePasOublier.album, "durée" : BangerANePasOublier.Duree, 'Pochette' : BangerANePasOublier.Pochette, 'uriChanson' : BangerANePasOublier.lien, 'NomVideo' : BangerANePasOublier.NomVideo, 'LienVideo' : BangerANePasOublier.LienVideo}
-        
+        self.contenuPlaylistnu = []
+        for i in range(len(Donnees)-1):
+            BangerASeRememorer = Donnees[str(i)]
+            self.contenuPlaylist.append(Chanson(BangerASeRememorer["titre"],BangerASeRememorer["ArtistePrinc"], BangerASeRememorer["album"], BangerASeRememorer["durée"], BangerASeRememorer["Pochette"], BangerASeRememorer["uriChanson"], Donnees["NomPlaylist"], NomVideoYT=BangerASeRememorer["NomVideo"], LienVideoYT=BangerASeRememorer["LienVideo"]))
+        self.LancerTableauDesChansons()
+
+    def ChangerValeur(self, event): #* Comment le "event" ne sert à rien...
+        ChansonATelechargerMalgreTout = self.contenuPlaylist[int(self.TableauChansons.selection()[0])]
+        ChansonATelechargerMalgreTout.telechargee = not ChansonATelechargerMalgreTout.telechargee
+        if ChansonATelechargerMalgreTout.telechargee:
+            self.TableauChansons.tag_configure(self.TableauChansons.selection()[0], background="#98b898")
+        else :
+            self.TableauChansons.tag_configure(self.TableauChansons.selection()[0], background="#faf8ca")
+        for item in self.TableauChansons.selection():
+            self.TableauChansons.selection_remove(item)
+
 
     def modifier(self):
         global BangerThatNeedsHelp, Brevassistance, Valeurs
-        assert len(self.TableauChansons.selection())!=0, "Il faut sélectionner une chanson pour que ça marche"
+        if not len(self.TableauChansons.selection())!=0 :
+            raise AssertionError("Il faut sélectionner une chanson pour que ça marche")
         BangerThatNeedsHelp = self.TableauChansons.selection()[0]
         Valeurs = self.TableauChansons.item(BangerThatNeedsHelp)['values']
         Brevassistance = Tk()
